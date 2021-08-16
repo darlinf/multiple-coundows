@@ -6,5 +6,5 @@ As its name indicates, this is an application with which you will have multiple 
 
 ## Technology used
 
-*React native
+* React native
  
