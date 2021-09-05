@@ -7,4 +7,9 @@ As its name indicates, this is an application with which you will have multiple 
 ## Technology used
 
 * React native
+* React native animatable
+* React native background timer
+* React native gesture handler
+* React native push notification
+* React native reanimated
  
