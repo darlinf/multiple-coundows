@@ -10,8 +10,17 @@ import {
   Dimensions,
   TextInput,
   Text,
+  AppState,
 } from "react-native";
 import Item from "./components/Item";
+
+import PushNotification from "react-native-push-notification";
+const createChannels = () => {
+  PushNotification.createChannel({
+    channelId: "text-channel",
+    channelName: "Test channel",
+  });
+};
 
 const { width, height } = Dimensions.get("window");
 
@@ -21,12 +30,51 @@ export default class App extends Component {
     this.state = {
       valueArray: [],
       disabled: false,
-      setMinutes: "0",
+      setMinutes: "1",
       setHours: "0",
+      appState: AppState.currentState,
+      showCountdownState: false,
+      countdownFinished: 0,
     };
+
     this.addNewEle = false;
     this.index = 0;
   }
+
+  componentDidMount() {
+    createChannels();
+    AppState.addEventListener("change", this._handleAppStateChange);
+  }
+
+  componentWillUnmount() {
+    AppState.removeEventListener("change", this._handleAppStateChange);
+  }
+
+  _handleAppStateChange = (nextAppState) => {
+    if (
+      !(
+        this.state.appState.match(/inactive|background/) &&
+        nextAppState === "active"
+      ) &&
+      this.state.valueArray.length !== 0
+    ) {
+      if (this.state.countdownFinished !== this.state.valueArray.length)
+        this.handleNotification();
+      this.state.showCountdownState = true;
+    } else {
+      this.state.showCountdownState = false;
+    }
+    this.setState({ appState: nextAppState });
+  };
+
+  handleNotification = () => {
+    PushNotification.localNotification({
+      channelId: "text-channel",
+      title: "Multiple coundows",
+      message: "Is running in background",
+      id: 1,
+    });
+  };
 
   afterAnimationComplete = () => {
     this.index += 1;
@@ -79,8 +127,26 @@ export default class App extends Component {
                   key={ele.id}
                   item={ele}
                   time={this.state.setHours * 3600 + 60 * this.state.setMinutes}
-                  removeItem={(id) => this.remove(id)}
+                  removeItem={(id) => {
+                    this.remove(id);
+                    if (this.state.countdownFinished !== 0)
+                      this.state.countdownFinished -= 1;
+                  }}
                   afterAnimationComplete={this.afterAnimationComplete}
+                  countdownEnd={() => {
+                    this.state.countdownFinished += 1;
+                    if (this.state.showCountdownState)
+                      PushNotification.localNotification({
+                        channelId: "text-channel",
+                        id: 1,
+                        title: "Multiple countdowns",
+                        message:
+                          "Countdown finished " +
+                          this.state.countdownFinished +
+                          " of " +
+                          this.state.valueArray.length,
+                      });
+                  }}
                 />
               );
             })}
@@ -179,7 +245,9 @@ export default class App extends Component {
               activeOpacity={0.8}
               style={styles.addBtn}
               disabled={this.state.disabled}
-              onPress={this.addMore}
+              onPress={() => {
+                this.addMore();
+              }}
             >
               <Image
                 source={require("./assets/add.png")}
@@ -196,7 +264,7 @@ export default class App extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: 30,
+    marginTop: 0,
   },
   addBtn: {
     width: 70,
